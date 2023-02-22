@@ -53,14 +53,21 @@ end
 
 function convert_domain(domain::Tuple{Int64,String},X,GU)
     ind,s = domain
-    @assert s=="*" "Parameter $(X.name) has string domain \"$s\", only expect \"*\""
-
+    #@assert s=="*" "Parameter $(X.name) has string domain \"$s\", only expect \"*\""
     df = pd_to_df(X.records)
-    elms = [GamsElement(e,"") for e in unique(df[!,ind])]
-    description  = "Generated domain for column $ind of parameter $(X.name)"
-    S = GamsSet(elms,description)
-    name = Symbol("__$(lowercase(X.name))_2")
-    add_set(GU,name,S)
+    if s == "*"
+        elms = [GamsElement(e,"") for e in unique(df[!,ind])]
+        description  = "Generated domain for column $ind of parameter $(X.name)"
+        S = GamsSet(elms,description)
+        name = Symbol("__$(lowercase(X.name))_2")
+        add_set(GU,name,S)
+    else
+        name = Symbol(s)
+        @assert name in keys(sets(GU)) """Parameter $(X.name) has string domain $s that is not a set. Odds are 
+        when the GDX file unloaded an alias wasn't unloaded at the same time. Once you figure out what that alias
+        is add the keyword aliases = Dict(:base_set => [:$(X.name)]) to this function call. If you find more aliases,
+        add more sets to this."""
+    end
     return name
 end
 
@@ -87,13 +94,18 @@ function GamsParameter_from_python!(GU,py_parm)
 end
 
 
-function load_universe_gdx!(GU,path_to_gdx)
+function load_universe_gdx!(GU,path_to_gdx;aliases = Dict{Symbol,Vector{Symbol}}())
     w = gt.Container(path_to_gdx)
+    #Sets
     for key in w.data
         X = w.data.get(key)
         if !(isnothing(X)) && py"type"(X) == gt.Set
             GamsSet_from_python!(GU,X)
         end
+    end
+    #Alaises
+    for (parent,child) in aliases
+        map(c->alias(GU,parent,c),child)
     end
     for key in w.data
         X = w.data.get(key)
@@ -102,6 +114,7 @@ function load_universe_gdx!(GU,path_to_gdx)
             alias(GU,parent,Symbol(lowercase(key)))
         end
     end
+    #Parameters
     for key in w.data
         X = w.data.get(key)
         if !(isnothing(X)) && py"type"(X) == gt.Parameter
@@ -112,9 +125,9 @@ function load_universe_gdx!(GU,path_to_gdx)
 end
 
 
-function load_universe_gdx(path_to_gdx)
+function load_universe_gdx(path_to_gdx;aliases = Dict{Symbol,Vector{Symbol}}())
     GU = GamsUniverse()
-    return load_universe_gdx!(GU,path_to_gdx)
+    return load_universe_gdx!(GU,path_to_gdx, aliases = aliases)
 end
 
 
