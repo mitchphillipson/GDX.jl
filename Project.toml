@@ -1,0 +1,9 @@
+name = "GDX"
+uuid = "bc93ee17-8779-40f0-b3aa-7a13053236c8"
+authors = ["mitchphillipson <mitch.phillipson@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+GamsStructure = "d6ad7568-1850-470f-916e-e505a496a0a2"
+PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
