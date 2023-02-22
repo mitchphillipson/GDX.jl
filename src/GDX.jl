@@ -81,7 +81,7 @@ function GamsParameter_from_python(GU,py_parm)
 end
 
 function GamsParameter_from_python!(GU,py_parm)
-    name = Symbol(py_parm.name)
+    name = Symbol(uppercase(py_parm.name))
     P = GamsParameter_from_python(GU,py_parm)
     add_parameter(GU,name,P)
 end
