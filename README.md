@@ -4,7 +4,7 @@
 https://github.com/mitchphillipson/GamsStructure.jl
 
 
-Since GAMS is case insensitive this package will make all sets lower case and all parameters uppercase. 
+Since GAMS is case insensitive this package will make all sets and parameters names be lower case. 
 
 All aliases in parameter domains are replaced by their non-aliased twin. For example, if $i$ is a set and $j$ is an alias of $i$ then all instances of $j$ in a parameter definition are replaced with $i$. If it's an explicit alias.
 

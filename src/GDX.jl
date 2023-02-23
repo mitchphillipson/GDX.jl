@@ -4,7 +4,6 @@ using PyCall
 using DataFrames
 using GamsStructure
 
-#@pyimport gams.transfer as gt
 
 const gt = PyNULL()
 
@@ -48,6 +47,11 @@ function convert_domain(domain::Tuple{Int64,PyObject},X,GU)
     if py"type"(s) == gt.Alias
         name = Symbol(lowercase(s.alias_with.name))
     end
+
+    @assert name∈keys(sets(GU)) """
+    Parameter $(X.name) domain entry :$name is not loaded. Add this to the sets keyword.
+    """
+
     return name
 end
 
@@ -59,14 +63,17 @@ function convert_domain(domain::Tuple{Int64,String},X,GU)
         elms = [GamsElement(e,"") for e in unique(df[!,ind])]
         description  = "Generated domain for column $ind of parameter $(X.name)"
         S = GamsSet(elms,description)
-        name = Symbol("__$(lowercase(X.name))_2")
+        name = Symbol("__$(lowercase(X.name))_$ind")
         add_set(GU,name,S)
     else
         name = Symbol(s)
-        @assert name in keys(sets(GU)) """Parameter $(X.name) has string domain $s that is not a set. Odds are 
-        when the GDX file unloaded an alias wasn't unloaded at the same time. Once you figure out what that alias
-        is add the keyword aliases = Dict(:base_set => [:$(X.name)]) to this function call. If you find more aliases,
-        add more sets to this."""
+        @assert name in keys(sets(GU)) """
+        Parameter $(X.name) has string domain $s that is not a set. Odds are when the GDX file unloaded an alias 
+        wasn't unloaded at the same time. Once you figure out what that alias is add the keyword 
+        
+        aliases = Dict(:base_set => [:$s]) 
+        
+        to this function call. If you find more aliases, add more sets to this."""
     end
     return name
 end
@@ -88,46 +95,66 @@ function GamsParameter_from_python(GU,py_parm)
 end
 
 function GamsParameter_from_python!(GU,py_parm)
-    name = Symbol(uppercase(py_parm.name))
+    name = Symbol(lowercase(py_parm.name))
     P = GamsParameter_from_python(GU,py_parm)
     add_parameter(GU,name,P)
 end
 
 
-function load_universe_gdx!(GU,path_to_gdx;aliases = Dict{Symbol,Vector{Symbol}}())
+
+
+
+function load_universe_gdx!(GU,path_to_gdx;
+    aliases = Dict{Symbol,Vector{Symbol}}(),
+    sets::Union{Nothing,Vector} = nothing,
+    parameters::Union{Nothing,Vector} = nothing,
+    )
     w = gt.Container(path_to_gdx)
     #Sets
     for key in w.data
         X = w.data.get(key)
         if !(isnothing(X)) && py"type"(X) == gt.Set
-            GamsSet_from_python!(GU,X)
+            name = Symbol(lowercase(X.name))
+            if isnothing(sets) || name∈sets 
+                GamsSet_from_python!(GU,X)
+            end
         end
     end
     #Alaises
     for (parent,child) in aliases
-        map(c->alias(GU,parent,c),child)
+        alias(GU,parent,child...)
     end
     for key in w.data
         X = w.data.get(key)
         if !(isnothing(X)) && py"type"(X) == gt.Alias
-            parent = Symbol(lowercase(X.alias_with.name))
-            alias(GU,parent,Symbol(lowercase(key)))
+            name = Symbol(lowercase(key))
+            if isnothing(sets) || name∈sets
+                parent = Symbol(lowercase(X.alias_with.name))
+                alias(GU,parent,name)
+            end
         end
     end
     #Parameters
     for key in w.data
         X = w.data.get(key)
         if !(isnothing(X)) && py"type"(X) == gt.Parameter
-            GamsParameter_from_python!(GU,X)
+            name = Symbol(lowercase(X.name))
+            if isnothing(parameters) || name∈parameters
+                GamsParameter_from_python!(GU,X)
+            end
         end
     end
     return GU
 end
 
 
-function load_universe_gdx(path_to_gdx;aliases = Dict{Symbol,Vector{Symbol}}())
+function load_universe_gdx(path_to_gdx;
+    aliases = Dict{Symbol,Vector{Symbol}}(),
+    sets::Union{Nothing,Vector} = nothing,
+    parameters::Union{Nothing,Vector} = nothing,
+    )
     GU = GamsUniverse()
-    return load_universe_gdx!(GU,path_to_gdx, aliases = aliases)
+    return load_universe_gdx!(GU,path_to_gdx, aliases = aliases, sets = sets, parameters = parameters)
 end
 
 
