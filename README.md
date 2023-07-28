@@ -10,6 +10,8 @@ All aliases in parameter domains are replaced by their non-aliased twin. For exa
 
 If a parameter has a * domain, then a new set is created based on the entries of the column. This set will be called :__[parm_name]_[column_index].
 
+This package requires you to install [gams.transfer](https://www.gams.com/latest/docs/API_PY_GAMSTRANSFER.html) into Julia's Python package. This will be loaded with PyCall.jl. I've found this to be finicky since gams.transfer is not available via pip (yet). Gams.transfer also requires a Gams installation. 
+
 To Do:
 1. Add options to load_universe_gdx to do the following:
     1. Only load some sets/parameters
